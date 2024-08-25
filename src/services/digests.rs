@@ -67,11 +67,35 @@ impl DailyRecapService {
                 }
             };
             info!("Obtained a summarized daily digest: {digest}");
-            if let Err(e) = db::insert_daily_digest(&self.db, digest, summary_ids).await {
+            if let Err(e) = db::insert_daily_digest(&self.db, digest.clone(), summary_ids).await {
                 error!("Could not insert summarized daily digest into DB: {e}");
                 continue;
             }
             info!("Saved daily digest to DB");
+
+            // Push the new daily digest to the Discord webhook
+            if let Ok(webhook_url) = std::env::var("DISCORD_WEBHOOK") {
+                let client = reqwest::Client::new();
+                let payload = serde_json::json!({
+                    "content": format!("Daily Digest: {}", digest)
+                });
+
+                match client.post(&webhook_url).json(&payload).send().await {
+                    Ok(response) => {
+                        if response.status().is_success() {
+                            info!("Successfully sent daily digest to Discord webhook");
+                        } else {
+                            error!(
+                                "Failed to send daily digest to Discord webhook. Status: {}",
+                                response.status()
+                            );
+                        }
+                    }
+                    Err(e) => error!("Error sending daily digest to Discord webhook: {}", e),
+                }
+            } else {
+                error!("DISCORD_WEBHOOK environment variable not set");
+            }
         }
     }
 }

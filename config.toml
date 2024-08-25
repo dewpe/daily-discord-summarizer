@@ -2,7 +2,7 @@
 url = "db.sqlite"
 
 [service]
-produce_digest_interval_seconds = 86400
+produce_digest_interval_seconds = 43200
 message_log_directory = "messages"
 port = 3000
 host = "127.0.0.1"
